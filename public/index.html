@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="stylesheet" href="main.css">
+        <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+        <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,300;0,400;0,600;1,200&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
+        <title>Chat Socket.io</title>
+    </head>
+    <body style="background: #d8d8d8;">
+        <div class="chat-container" id="app">
+            <div class="header-chat">
+                <h2>
+                    Chat
+                    <i class="fa fa-comments" aria-hidden="true"></i>
+                </h2>
+                <div class="user">
+                    Usuario
+                    <input type="text" placeholder="" autocomplete="off" v-model="usernameValue">
+                    <div class="userPhoto">
+                        <i class="fa fa-user-circle-o" aria-hidden="true"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="output">
+                <div v-for="item of messages" id="lista" :class="[item.username == usernameValue ? personal : '']">
+                    <span v-if="item.username == usernameValue">
+                        {{item.message}}
+                    </span>
+                    <span v-else>
+                        <strong>{{item.username}}: </strong>{{item.message}}
+                    </span>
+                </div>
+                <span class="typing" v-if="show">{{userTyping}} esta escribinedo...</span>
+            </div>
+            <div class="inputs">
+                <input type="text" v-model="messageValue" placeholder="Escribe un mensaje" @keypress="typing()" @keyup.enter="send()">
+                <i class="fa fa-heart emoji" aria-hidden="true" @click="heart()"></i>
+                <button @click="send()">
+                    <i class="fa fa-paper-plane" aria-hidden="true"></i>
+                </button>
+            </div>
+        </div>
+        
+    </body>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="chat.js"></script>
+    <script>
+        const socket = io();
+        let output = document.querySelector('.output');
+
+        var vue = new Vue({
+            el: '#app',
+            data:{
+                messages:[],
+                personal: 'personal',
+                show: false,
+                userTyping: '',
+                usernameValue: '',
+                messageValue: ''
+            },
+            methods:{
+                send(){
+                    if(this.messageValue !== '' && this.usernameValue !== ''){
+                        socket.emit("chat:message", {
+                            username: this.usernameValue,
+                            message: this.messageValue
+                        });
+                        this.messageValue = '';
+                        this.scroll();
+                    }
+                },
+                typing(){
+                    socket.emit('chat:typing', this.usernameValue);
+                },
+                scroll(){
+                    let altura = Number(output.scrollHeight) + 44;
+                    output.scrollTo(0, altura)
+                },
+                heart(){
+                    socket.emit("chat:message", {
+                        username: this.usernameValue,
+                        message: '❤'
+                    });
+                }
+            }
+        })
+        socket.on('chat:message', (data)=>{
+            vue.messages.push(data);
+            vue.show = false;
+        });
+        socket.on('chat:typing', (data)=>{
+            vue.show = true;
+            vue.userTyping = data; 
+        });
+    </script>
+</html>
